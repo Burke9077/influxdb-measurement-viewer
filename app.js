@@ -1,0 +1,135 @@
+/*
+    Initial app configuration and loading settings
+*/
+
+// Configure our app wide configurations
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const yaml = require('js-yaml');
+const { engine } = require('express-handlebars');
+const { InfluxDB, QueryApi } = require('@influxdata/influxdb-client');
+
+// Load the configuration file
+const configPath = path.join(__dirname, 'config.yml');
+const config = yaml.load(fs.readFileSync(configPath, 'utf8'));
+
+
+
+/*
+    Initialize the webserver
+*/
+
+// Configure our webserver (express)
+const app = express();
+const hostname = config.server.hostname; // Use hostname from the config
+const port = config.server.port;
+
+// Register '.mustache' extension with Express
+app.engine('hbs', engine({ 
+    extname: '.hbs', 
+    defaultLayout: 'main',
+    layoutsDir: __dirname + '/views/layouts/',
+    partialsDir: __dirname + '/views/partials/'
+}));
+app.set('view engine', 'hbs');
+
+// Serve static files from the "public" directory
+app.use(express.static('public'));
+
+
+
+/*
+    InfluxDB setup and initial data load
+*/
+
+// InfluxDB client setup
+const influxdbConfig = config.influxdb;
+const influxDB = new InfluxDB({
+  url: influxdbConfig.url,
+  token: influxdbConfig.token
+});
+const queryApi = influxDB.getQueryApi(influxdbConfig.org);
+// Make a simple query to check the connection
+queryApi.queryRaw('buckets()', {
+  org: influxdbConfig.org,
+})
+.then(result => {
+  console.log('Successfully connected to InfluxDB');
+})
+.catch(error => {
+  console.error('Error connecting to InfluxDB', error);
+});
+
+
+
+/*
+    Define helper functions for our routes
+*/
+/*
+    getAllMeasurements
+    input: queryApi (influxDB object)
+    bucketName: influx DB bucket name (String)
+    callback: function (err, data)
+*/
+function getAllMeasurements(queryApi, bucketName, callback) {
+    let query = `
+    import "influxdata/influxdb/schema"
+    
+    schema.measurements(bucket: "${bucketName}")
+    `;
+    let measurementsArray = [];
+    queryApi.queryRows(query, {
+        next(row, tableMeta) {
+            let o = tableMeta.toObject(row);
+            measurementsArray.push(o._value);
+        },
+        error(error) {
+            console.error("\nMeasurement list retrieved with error: \n" + error);
+            return callback(error, measurementsArray);
+        },
+        complete() {
+            return callback(null, measurementsArray);
+        },
+    }); 
+};
+getAllMeasurements(queryApi, config.influxdb.bucket, (err, data) => {
+    if (err) {
+        console.error(err);
+    } else {
+        console.log(data);
+    }
+});
+
+
+/*
+    Serve up web routes
+*/
+
+// Serve main index page
+app.get('/', (req, res) => {
+    res.render('home', { 
+        config: config,
+        navbar: {home: true},
+        pageName: 'Home'
+    });
+});
+
+// Data trends page
+app.get('/data-trends', (req, res) => {
+    res.render('data-trends', {
+        config: config,
+        navbar: {datatrends: true},
+        pageName: 'Data Trends'
+    });
+});
+
+
+
+/*
+    Finally, start the web server
+*/
+
+app.listen(port, hostname, () => {
+    console.log(`Server is running on http://${hostname}:${port}`);
+});

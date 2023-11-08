@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    {{> head }}
+</head>
+
+<body>
+
+<div id="wrapper">
+    {{> sidebar }}
+    <div id="page-wrapper" class="gray-bg">
+        {{> header }}
+        <div class="wrapper wrapper-content animated fadeInRight">
+            {{{body}}}
+        </div>
+        <div class="footer">
+            {{> footer }}
+        </div>
+    </div>
+</div>
+</body>
+</html>

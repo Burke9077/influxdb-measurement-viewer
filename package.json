@@ -1,0 +1,20 @@
+{
+  "name": "influx-stat-viewer",
+  "version": "0.0.1",
+  "description": "Stats viewer for InfluxDB",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "burke9077@gmail.com",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@influxdata/influxdb-client": "^1.33.2",
+    "express": "^4.18.2",
+    "express-handlebars": "^7.1.2",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
