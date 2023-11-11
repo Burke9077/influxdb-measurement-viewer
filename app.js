@@ -87,13 +87,6 @@ function getAllMeasurements(queryApi, bucketName, callback) {
 		},
 	}); 
 };
-getAllMeasurements(queryApi, config.influxdb.bucket, (err, data) => {
-	if (err) {
-		console.error(err);
-	} else {
-		console.log(data);
-	}
-});
 
 
 /*
