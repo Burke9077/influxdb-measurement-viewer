@@ -3,3 +3,4 @@ node_modules
 
 # Ignore sensitive files
 config.yml
+docker-dev-startup.sh
