@@ -37,8 +37,8 @@ class ChartConfig {
 		}
 	}
 
+	// Update settings and save the file
 	update(newSettings) {
-		// Update settings and save the file
 		Object.assign(this.metrics, newSettings);
 		this.save();
 	}
@@ -96,7 +96,6 @@ class ChartConfig {
 			throw error;
 		}
 	}
-	
 }
 
 
