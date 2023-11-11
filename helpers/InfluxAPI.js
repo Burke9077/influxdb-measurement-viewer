@@ -12,6 +12,7 @@ class InfluxAPI {
 		const influxDB = new InfluxDB({
 			url: config.url,
 			token: config.token,
+			timeout: 60000
 		});
 		InfluxAPI.instance = influxDB.getQueryApi(config.org);
 	}
