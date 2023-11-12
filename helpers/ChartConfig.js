@@ -57,51 +57,53 @@ class ChartConfig {
 	}
 
 	// Function to load measurements and their min/max values
-	async createDefaultSettings() {
-		// Query to retrieve all measurements from the bucket
+	createDefaultSettings() {
+		console.log(`Creating default settings.`)
 		const measurementsQuery = `
 			import "influxdata/influxdb/v1"
-
 			v1.measurements(bucket: "${this.bucket}")`;
-
-		try {
-			const measurements = await this.executeFluxQuery(measurementsQuery);
-			for (let measurement of measurements) {
-				const minMaxQuery = `
-					from(bucket: "${this.bucket}")
-					|> range(start: -1y)
-					|> filter(fn: (r) => r._measurement == "${measurement._value}")
-					|> map(fn: (r) => ({ r with _value: float(v: r._value) })) // Convert all values to floats
-					|> reduce(
-						fn: (r, accumulator) => ({
-							min: if r._value < accumulator.min then r._value else accumulator.min,
-							max: if r._value > accumulator.max then r._value else accumulator.max
-						}),
-						identity: {min: float(v: 9999999999), max: float(v: -9999999999)} // Use large numbers for initialization
-					)`;
-
-				try {
-					const minMaxValues = await this.executeFluxQuery(minMaxQuery);
-					console.log(minMaxValues);
-					// Assuming minMaxValues contains one object with min and max properties
-					if (minMaxValues.length > 0) {
-						const { min, max } = minMaxValues[0];
-						this.measurements.push({
-							name: measurement._value,
-							min: min,
-							max: max
+	
+		this.executeFluxQuery(measurementsQuery)
+			.then(measurements => {
+				return Promise.all(measurements.map(measurement => {
+					console.log(`Discovered measurement for default settings: ${measurement._value}`);
+					const minMaxQuery = `
+						from(bucket: "${this.bucket}")
+						|> range(start: -1y)
+						|> filter(fn: (r) => r._measurement == "${measurement._value}")
+						|> map(fn: (r) => ({ r with _value: float(v: r._value) })) // Convert all values to floats
+						|> reduce(
+							fn: (r, accumulator) => ({
+								min: if r._value < accumulator.min then r._value else accumulator.min,
+								max: if r._value > accumulator.max then r._value else accumulator.max
+							}),
+							identity: {min: float(v: 9999999999), max: float(v: -9999999999)} // Use large numbers for initialization
+						)`;
+					return this.executeFluxQuery(minMaxQuery)
+						.then(minMaxValues => {
+							console.log(`Discovered min/max values for ${measurement._value}.`);
+							if (minMaxValues.length > 0) {
+								const { min, max } = minMaxValues[0];
+								return {
+									name: measurement._value,
+									min: min,
+									max: max,
+									measurementDisplayType: "linear"
+								};
+							}
 						});
-					}
-				} catch (error) {
-					console.error(`Error fetching min/max for measurement ${measurement._value}:`, error);
-				}
-				this.save(); // Save after updating all measurements
-			}			
-		} catch (error) {
-			console.error('Error creating default settings:', error);
-		}
+				}));
+			})
+			.then(measurementResults => {
+				this.measurements = measurementResults.filter(Boolean);
+				console.log(`Successfully created default settings.`);
+				this.save(); // Save after all measurements have been updated
+			})
+			.catch(error => {
+				console.error('Error creating default settings:', error);
+			});
 	}
-
+	
 	// Helper function to execute flux query
 	async executeFluxQuery(query) {
 		try {

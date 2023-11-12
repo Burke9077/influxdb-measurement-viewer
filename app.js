@@ -40,6 +40,14 @@ app.set('view engine', 'hbs');
 // Serve static files from the "public" directory
 app.use(express.static('public'));
 
+// Configure livereload
+const livereload = require('livereload');
+const connectLivereload = require('connect-livereload');
+const liveReloadServer = livereload.createServer();
+liveReloadServer.watch(__dirname, "views");
+liveReloadServer.watch(__dirname, "public");
+app.use(connectLivereload());
+
 
 /*
     InfluxDB setup and initial data load

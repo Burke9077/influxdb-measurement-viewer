@@ -5,7 +5,7 @@
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "/bin/bash -c '(/bin/bash docker-dev-startup.sh && echo \"waiting for influx\" && sleep 3 && nodemon app.js); docker rm -f influxviewerdev'"
+    "dev": "/bin/bash -c '(/bin/bash docker-dev-startup.sh && echo \"waiting for influx\" && sleep 3 && nodemon app.js) | browser-sync start --proxy 'localhost:3000' --files 'public/**/*.*, views/**/*.*'; docker rm -f influxviewerdev'"
   },
   "author": "burke9077@gmail.com",
   "license": "UNLICENSED",
@@ -16,6 +16,9 @@
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {
+    "browser-sync": "^2.29.3",
+    "connect-livereload": "^0.6.1",
+    "livereload": "^0.9.3",
     "nodemon": "^3.0.1"
   }
 }
