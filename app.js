@@ -131,10 +131,17 @@ app.get('/', (req, res) => {
 
 // Data trends page
 app.get('/data-trends', (req, res) => {
+	// Tweak our chartconfig as needed
+	let modifiedChartConfig = JSON.parse(JSON.stringify(chartConfig));
+	modifiedChartConfig.variablegroups.forEach(group => {
+		group.isSelected = (group.name === "All Variables");
+	});
+	
 	res.render('data-trends', {
 		config: config,
+		chartconfig: modifiedChartConfig,
 		navbar: {datatrends: true},
-		pageName: 'Data Trends'
+		pageName: 'Data Trends',
 	});
 });
 
@@ -145,12 +152,4 @@ app.get('/data-trends', (req, res) => {
 
 app.listen(port, hostname, () => {
 	console.log(`Server is running on http://${hostname}:${port}`);
-});
-
-// Listen for 
-process.on('SIGINT', () => {
-    console.log('Received SIGINT. Shutting down gracefully.');
-    server.close(() => {
-        console.log('Server shut down.');
-    });
 });

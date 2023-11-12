@@ -35,7 +35,7 @@ class ChartConfig {
             const fileContents = fs.readFileSync(this.chartConfigFilePath, 'utf8');
             const data = yaml.load(fileContents);
             this.measurements = data.measurements || [];
-			this.defaultVariableGroup = data.variablegroups || [];
+			this.variablegroups = data.variablegroups || [];
         } catch (e) {
             console.error(`Failed to load chart config from ${this.chartConfigFilePath}:`, e);
             this.measurements = []; // Reset to empty if there's an error
@@ -44,7 +44,7 @@ class ChartConfig {
 	
 	save() {
 		try {
-			const yamlStr = yaml.dump({ measurements: this.measurements });
+			const yamlStr = yaml.dump({ measurements: this.measurements, variablegroups: this.variablegroups });
 			fs.writeFileSync(this.chartConfigFilePath, yamlStr, 'utf8');
 		} catch (e) {
 			console.error(`Failed to save config to ${this.filePath}:`, e);
@@ -71,7 +71,7 @@ class ChartConfig {
 					console.log(`Discovered measurement for default settings: ${measurement._value}`);
 					const minMaxQuery = `
 						from(bucket: "${this.bucket}")
-						|> range(start: -1y)
+						|> range(start: -30d)
 						|> filter(fn: (r) => r._measurement == "${measurement._value}")
 						|> map(fn: (r) => ({ r with _value: float(v: r._value) })) // Convert all values to floats
 						|> reduce(
@@ -100,9 +100,14 @@ class ChartConfig {
 				this.measurements = measurementResults.filter(Boolean);
 				console.log(`Successfully retrieved min and max settings.`);
 				console.log(`Creating initial variable group.`);
-				let defaultVariableGroup = [];
-				for (variableGroupMember in this.measurements) {
-					defaultVariableGroup.push(variableGroupMember.name);
+				let defaultVariableGroup = {
+					name: "All Variables",
+					variables: []
+				};
+				for (let variableGroupMember of this.measurements) {
+					console.log(variableGroupMember);
+					console.log(JSON.stringify(variableGroupMember, null, 4));
+					defaultVariableGroup.variables.push(variableGroupMember.name);
 				}
 				this.variablegroups = [defaultVariableGroup];
 				this.save(); // Save after all measurements have been updated

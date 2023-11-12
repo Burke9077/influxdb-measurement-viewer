@@ -1,71 +1,132 @@
 <div class="row">
-    <div class="col-lg-12 col-xl-8"> <!--Paramater comparison aka the chart box-->
-        <div class="ibox ">
-            <div class="ibox-title">
-                <h5>Parameter Comparison</h5>
-                <div class="ibox-tools">
-                    <a class="collapse-link">
-                        <i class="fa fa-chevron-up"></i>
-                    </a>
-                    <a class="close-link">
-                        <i class="fa fa-times"></i>
-                    </a>
-                </div>
-            </div>
-            <div class="ibox-content vh-80">
+	<div class="col-lg-12 col-xl-8"> <!--Paramater comparison aka the chart box-->
+		<div class="ibox ">
+			<div class="ibox-title">
+				<h5>Parameter Comparison</h5>
+				<div class="ibox-tools">
+					<a class="collapse-link">
+						<i class="fa fa-chevron-up"></i>
+					</a>
+					<a class="close-link">
+						<i class="fa fa-times"></i>
+					</a>
+				</div>
+			</div>
+			<div class="ibox-content vh-80">
+				<div>
+					<canvas id="lineChart" height="140"></canvas>
+				</div>
+				<script src="/js/data-trends.js"></script>
+			</div>
+		</div>
+	</div>
+
+	<div class="col-lg-12 col-xl-4"> <!--Right hand section for selecting and adjusting params -->
+		<div class="col-md-12 col-lg-6 col-xl-12"> <!-- Add/remove parameters -->
+			<div class="ibox ">
+				<div class="ibox-title">
+					<h5>Variable Groups</h5>
+					<div class="ibox-tools">
+						<a class="collapse-link">
+							<i class="fa fa-chevron-up"></i>
+						</a>
+						<a class="close-link">
+							<i class="fa fa-times"></i>
+						</a>
+					</div>
+				</div>
+				<div class="ibox-content">
+					<div class="row">
+						<div class="col-sm-12">
+							<script type="text/javascript">
+								function changeVariableGroup(newVariableGroupName) {
+									// TODO!!!
+								}
+								// Initially load the default group when page is loaded
+								document.addEventListener('DOMContentLoaded', function() {
+									let initialSelectElement = document.querySelector('#variableGroupSelector');
+									let initialSelectElementName = initialSelectElement.options[initialSelectElement.selectedIndex].text;
+									if (initialSelectElementName) {
+										changeVariableGroup(initialSelectElementName);
+									}
+								});
 
 
-            </div>
-        </div>
-    </div>
 
-    <div class="col-lg-12 col-xl-4"> <!--Right hand section for selecting and adjusting params -->
-        <div class="col-md-12 col-lg-6 col-xl-12"> <!-- Add/remove parameters -->
-            <div class="ibox ">
-                <div class="ibox-title">
-                    <h5>Variable Groups</h5>
-                    <div class="ibox-tools">
-                        <a class="collapse-link">
-                            <i class="fa fa-chevron-up"></i>
-                        </a>
-                        <a class="close-link">
-                            <i class="fa fa-times"></i>
-                        </a>
-                    </div>
-                </div>
-                <div class="ibox-content">
-                    <div class="row">
-                        <div class="col-sm-12">
-                            <select class="form-control" size="3">
-                                <option>option 1</option>
-                                <option>option 2</option>
-                                <option>option 3</option>
-                                <option>option 4</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+								// Setup the chart!
+								let parameterChart = {
+									type: 'line',
+									data: {
+										labels: ["January", "February", "March", "April", "May", "June", "July"],
+										datasets: [
+											{
+												label: "Data 1",
+												yAxisID: 'y1',
+												backgroundColor: 'rgba(26,179,148,0.5)',
+												borderColor: "rgba(26,179,148,0.7)",
+												pointBackgroundColor: "rgba(26,179,148,1)",
+												pointBorderColor: "#fff",
+												data: [28, 48, 40, 19, 86, 27, 90]
+											},{
+												label: "Data 2",
+												yAxisID: 'y2',
+												backgroundColor: 'rgba(220, 220, 220, 0.5)',
+												pointBorderColor: "#fff",
+												data: [65, 59, 80, 81, 56, 55, 40]
+											}
+										]
+									},
+									options: {
+										responsive: true,
+										scales: {
+											y1: {
+												type: 'logarithmic',
+												min: 0,
+												max: 200,
+												display: false,
+											},
+											y2: {
+												type: 'linear',
+												min: 0,
+												max: 200,
+												display: true,
+											}
+										}
+									}
+								};
 
-        <div class="col-md-12 col-lg-6 col-xl-12"> <!-- Select and Adjust Parameters -->
-            <div class="ibox ">
-                <div class="ibox-title">
-                    <h5>Select/Adjust Parameters</h5>
-                    <div class="ibox-tools">
-                        <a class="collapse-link">
-                            <i class="fa fa-chevron-up"></i>
-                        </a>
-                        <a class="close-link">
-                            <i class="fa fa-times"></i>
-                        </a>
-                    </div>
-                </div>
-                <div class="ibox-content">
+								let ctx = document.getElementById("lineChart").getContext("2d");
+								let chart = new Chart(ctx, parameterChart);
+							</script>
+							<select id="variableGroupSelector" class="form-control" size="3" onchange="changeVariableGroup(this);">
+								{{#chartconfig.variablegroups}}
+								<option id="{{this.name}}" {{#if this.isSelected}}selected{{/if}}>{{this.name}}</option>
+								{{/chartconfig.variablegroups}}
+							</select>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="col-md-12 col-lg-6 col-xl-12"> <!-- Select and Adjust Parameters -->
+			<div class="ibox ">
+				<div class="ibox-title">
+					<h5>Select/Adjust Parameters</h5>
+					<div class="ibox-tools">
+						<a class="collapse-link">
+							<i class="fa fa-chevron-up"></i>
+						</a>
+						<a class="close-link">
+							<i class="fa fa-times"></i>
+						</a>
+					</div>
+				</div>
+				<div class="ibox-content">
 
 
-                </div>
-            </div>
-        </div>
-    </div>
+				</div>
+			</div>
+		</div>
+	</div>
 </div>
