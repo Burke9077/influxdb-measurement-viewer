@@ -146,3 +146,11 @@ app.get('/data-trends', (req, res) => {
 app.listen(port, hostname, () => {
 	console.log(`Server is running on http://${hostname}:${port}`);
 });
+
+// Listen for 
+process.on('SIGINT', () => {
+    console.log('Received SIGINT. Shutting down gracefully.');
+    server.close(() => {
+        console.log('Server shut down.');
+    });
+});

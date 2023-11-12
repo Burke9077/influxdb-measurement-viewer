@@ -8,6 +8,7 @@ class ChartConfig {
 		this.configFilePath = configFilePath;
 		this.chartConfigFilePath = chartConfigFilePath;
 		this.measurements = [];
+		this.variablegroups = [];
 		this.loadConfig();
 		this.queryApi = InfluxAPI.getInstance();
 	
@@ -34,6 +35,7 @@ class ChartConfig {
             const fileContents = fs.readFileSync(this.chartConfigFilePath, 'utf8');
             const data = yaml.load(fileContents);
             this.measurements = data.measurements || [];
+			this.defaultVariableGroup = data.variablegroups || [];
         } catch (e) {
             console.error(`Failed to load chart config from ${this.chartConfigFilePath}:`, e);
             this.measurements = []; // Reset to empty if there's an error
@@ -96,7 +98,13 @@ class ChartConfig {
 			})
 			.then(measurementResults => {
 				this.measurements = measurementResults.filter(Boolean);
-				console.log(`Successfully created default settings.`);
+				console.log(`Successfully retrieved min and max settings.`);
+				console.log(`Creating initial variable group.`);
+				let defaultVariableGroup = [];
+				for (variableGroupMember in this.measurements) {
+					defaultVariableGroup.push(variableGroupMember.name);
+				}
+				this.variablegroups = [defaultVariableGroup];
 				this.save(); // Save after all measurements have been updated
 			})
 			.catch(error => {
