@@ -41,6 +41,7 @@
 							<script type="text/javascript">
 								function changeVariableGroup(newVariableGroupName) {
 									// TODO!!!
+									console.log("load " + newVariableGroupName);
 								}
 								// Initially load the default group when page is loaded
 								document.addEventListener('DOMContentLoaded', function() {
@@ -57,7 +58,6 @@
 								let parameterChart = {
 									type: 'line',
 									data: {
-										labels: ["January", "February", "March", "April", "May", "June", "July"],
 										datasets: [
 											{
 												label: "Data 1",
@@ -66,13 +66,13 @@
 												borderColor: "rgba(26,179,148,0.7)",
 												pointBackgroundColor: "rgba(26,179,148,1)",
 												pointBorderColor: "#fff",
-												data: [28, 48, 40, 19, 86, 27, 90]
+												data: [{x: "2022-01-01", y: 28}, {x: "2022-02-01", y: 48}, {x: "2022-03-01", y: 40}]
 											},{
 												label: "Data 2",
 												yAxisID: 'y2',
 												backgroundColor: 'rgba(220, 220, 220, 0.5)',
 												pointBorderColor: "#fff",
-												data: [65, 59, 80, 81, 56, 55, 40]
+												data: [{x: "2022-01-01", y: 65}, {x: "2022-02-01", y: 80}, {x: "2022-03-01", y: 90}]
 											}
 										]
 									},
@@ -112,7 +112,7 @@
 		<div class="col-md-12 col-lg-6 col-xl-12"> <!-- Select and Adjust Parameters -->
 			<div class="ibox ">
 				<div class="ibox-title">
-					<h5>Select/Adjust Parameters</h5>
+					<h5>Selected Group</h5>
 					<div class="ibox-tools">
 						<a class="collapse-link">
 							<i class="fa fa-chevron-up"></i>
@@ -123,8 +123,32 @@
 					</div>
 				</div>
 				<div class="ibox-content">
-
-
+					<table class="table table-hover">
+						<thead>
+							<tr>
+								<th>Display</th>
+								<th>Variable Name</th>
+								<th>Live Value</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><div class="icheckbox_square-green checked" style="position: relative;"><input type="checkbox" checked="" class="i-checks" name="input[]" style="position: absolute; opacity: 0;"><ins class="iCheck-helper" style="position: absolute; top: 0%; left: 0%; display: block; width: 100%; height: 100%; margin: 0px; padding: 0px; background: rgb(255, 255, 255); border: 0px; opacity: 0;"></ins></div></td>
+								<td>Mark</td>
+								<td>Otto</td>
+							</tr>
+							<tr>
+								<td>2</td>
+								<td>Jacob</td>
+								<td>Thornton</td>
+							</tr>
+							<tr>
+								<td>3</td>
+								<td>Larry</td>
+								<td>the Bird</td>
+							</tr>
+						</tbody>
+					</table>
 				</div>
 			</div>
 		</div>
