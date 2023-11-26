@@ -38,71 +38,73 @@
 				<div class="ibox-content">
 					<div class="row">
 						<div class="col-sm-12">
-							<script type="text/javascript">
-								function changeVariableGroup(newVariableGroupName) {
-									// TODO!!!
-									console.log("load " + newVariableGroupName);
-								}
-								// Initially load the default group when page is loaded
-								document.addEventListener('DOMContentLoaded', function() {
-									let initialSelectElement = document.querySelector('#variableGroupSelector');
-									let initialSelectElementName = initialSelectElement.options[initialSelectElement.selectedIndex].text;
-									if (initialSelectElementName) {
-										changeVariableGroup(initialSelectElementName);
-									}
-								});
-
-
-
-								// Setup the chart!
-								let parameterChart = {
-									type: 'line',
-									data: {
-										datasets: [
-											{
-												label: "Data 1",
-												yAxisID: 'y1',
-												backgroundColor: 'rgba(26,179,148,0.5)',
-												borderColor: "rgba(26,179,148,0.7)",
-												pointBackgroundColor: "rgba(26,179,148,1)",
-												pointBorderColor: "#fff",
-												data: [{x: "2022-01-01", y: 28}, {x: "2022-02-01", y: 48}, {x: "2022-03-01", y: 40}]
-											},{
-												label: "Data 2",
-												yAxisID: 'y2',
-												backgroundColor: 'rgba(220, 220, 220, 0.5)',
-												pointBorderColor: "#fff",
-												data: [{x: "2022-01-01", y: 65}, {x: "2022-02-01", y: 80}, {x: "2022-03-01", y: 90}]
-											}
-										]
-									},
-									options: {
-										responsive: true,
-										scales: {
-											y1: {
-												type: 'logarithmic',
-												min: 0,
-												max: 200,
-												display: false,
-											},
-											y2: {
-												type: 'linear',
-												min: 0,
-												max: 200,
-												display: true,
-											}
-										}
-									}
-								};
-
-								let ctx = document.getElementById("lineChart").getContext("2d");
-								let chart = new Chart(ctx, parameterChart);
-							</script>
-							<select id="variableGroupSelector" class="form-control" size="3" onchange="changeVariableGroup(this);">
+							<select id="variableGroupSelector" class="form-control" size="3" onchange="updateChart();">
 								{{#chartconfig.variablegroups}}
 								<option id="{{this.name}}" {{#if this.isSelected}}selected{{/if}}>{{this.name}}</option>
 								{{/chartconfig.variablegroups}}
 							</select>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="col-md-12 col-lg-6 col-xl-12"> <!-- Change Time Range -->
+			<div class="ibox ">
+				<div class="ibox-title">
+					<h5>Change Search Time Range</h5>
+					<div class="ibox-tools">
+						<a class="collapse-link">
+							<i class="fa fa-chevron-up"></i>
+						</a>
+						<a class="close-link">
+							<i class="fa fa-times"></i>
+						</a>
+					</div>
+				</div>
+				<div class="ibox-content">
+					<div class="row">
+						<div class="col-sm-12">
+							<select id="timeRangeSelector" class="form-control">
+								<option value="custom">Custom Date/Time Range</option>
+								<optgroup label="Relative Time Range">
+									<option value="-60s">Last 60 Seconds</option>
+									<option value="-5m">Last 5 Minutes</option>
+									<option value="-10m">Last 10 Minutes</option>
+									<option value="-15m">Last 15 Minutes</option>
+									<option value="-30m">Last 30 Minutes</option>
+									<option value="-1h">Last 1 Hour</option>
+									<option value="-6h">Last 6 Hours</option>
+									<option value="-12h">Last 12 Hours</option>
+									<option value="-24h">Last 24 Hours</option>
+									<option value="-7d">Last 7 Days</option>
+									<option value="-30d" selected>Last 30 Days</option>
+									<option value="-90d">Last 3 Months</option>
+									<option value="-180d">Last 6 Months</option>
+								</optgroup>
+							</select>
+						</div>
+					</div>
+					<div class="row">
+						<div id="customDateTimeContainer" style="display:none;">
+							<!-- This section will only be shown if the user selects a custom time & date range -->
+							<div class="form-group col-sm-12" style="margin-top: 1.0em;">
+								<label class="font-normal">Start Date</label>
+								<div class="input-group">
+									<span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+									<input id="startDate" type="text" class="form-control date-picker" value="2014-07-01">
+								</div>
+							</div>
+							<div class="col-sm-12">
+								<p>to</p>
+							</div>
+							<div class="form-group col-sm-12">
+								<label class="font-normal">End Date</label>
+								<div class="input-group">
+									<span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+									<input id="endDate" type="text" class="form-control date-picker" value="2014-07-01">
+								</div>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -154,3 +156,100 @@
 		</div>
 	</div>
 </div>
+
+<script type="text/javascript">
+	// Function to be called when the chart needs to be updated
+	function updateChart() {
+		let currentSelectedVariableGroup = $("#variableGroupSelector").val();
+		let currentSelectedSearchType = $("#timeRangeSelector").val();
+		console.log("update chart hit");
+	}
+
+	// Function to toggle the display of custom date/time
+	function toggleCustomDateTimeDisplay() {
+		var customDateTimeContainer = document.getElementById('customDateTimeContainer');
+		var timeRangeSelector = document.getElementById('timeRangeSelector');
+		customDateTimeContainer.style.display = timeRangeSelector.value === 'custom' ? 'block' : 'none';
+	}
+
+	// DOMContentLoaded event
+	document.addEventListener('DOMContentLoaded', function() {
+		// Initialize Select2
+		$('#timeRangeSelector').select2({
+			minimumResultsForSearch: Infinity // Hides the search box
+		});
+
+		// Add change event listener to the time range selector
+		$('#timeRangeSelector').on('change', function() {
+			toggleCustomDateTimeDisplay();
+			updateChart(); // Call the updateChart function as well
+		});
+
+		// Initially load the default group when page is loaded
+		let initialSelectElement = document.querySelector('#variableGroupSelector');
+		if (initialSelectElement) {
+			updateChart();
+		}
+
+		// Call the function on initial load as well
+		toggleCustomDateTimeDisplay();
+	});
+
+	$(document).ready(function(){
+		// Setup datepickers
+		let startDate = $('.date-picker').datepicker({
+			todayBtn: "linked",
+			keyboardNavigation: true,
+			forceParse: true,
+			calendarWeeks: true,
+			autoclose: true,
+			format: "yyyy-mm-dd"
+		});
+		console.log(startDate);
+	});
+
+
+	// Setup the chart!
+	let parameterChart = {
+		type: 'line',
+		data: {
+			datasets: [
+				{
+					label: "Data 1",
+					yAxisID: 'y1',
+					backgroundColor: 'rgba(26,179,148,0.5)',
+					borderColor: "rgba(26,179,148,0.7)",
+					pointBackgroundColor: "rgba(26,179,148,1)",
+					pointBorderColor: "#fff",
+					data: [{x: "2022-01-01", y: 28}, {x: "2022-02-01", y: 48}, {x: "2022-03-01", y: 40}]
+				},{
+					label: "Data 2",
+					yAxisID: 'y2',
+					backgroundColor: 'rgba(220, 220, 220, 0.5)',
+					pointBorderColor: "#fff",
+					data: [{x: "2022-01-01", y: 65}, {x: "2022-02-01", y: 80}, {x: "2022-03-01", y: 90}]
+				}
+			]
+		},
+		options: {
+			responsive: true,
+			scales: {
+				y1: {
+					type: 'logarithmic',
+					min: 0,
+					max: 200,
+					display: false,
+				},
+				y2: {
+					type: 'linear',
+					min: 0,
+					max: 200,
+					display: true,
+				}
+			}
+		}
+	};
+
+	let ctx = document.getElementById("lineChart").getContext("2d");
+	let chart = new Chart(ctx, parameterChart);
+</script>
