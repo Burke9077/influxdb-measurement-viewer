@@ -1,8 +1,5 @@
 {
 	"watch": ["*.js", "*.mjs", "*.cjs", "*.json", "*.yaml", "*.yml", "*.hbs", "*.css"],
 	"ext": "js,mjs,cjs,json,yaml,yml,hbs,css",
-	"ignore": ["chart-config.yml"],
-	"events": {
-        "restart": "node trigger-browser-sync.js"
-    }
+	"ignore": ["chart-config.yml"]
 }

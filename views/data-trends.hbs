@@ -38,7 +38,7 @@
 				<div class="ibox-content">
 					<div class="row">
 						<div class="col-sm-12">
-							<select id="variableGroupSelector" class="form-control" size="3" onchange="updateChart();">
+							<select id="variableGroupSelector" class="form-control" size="3" onchange="requestUpdatedChart();">
 								{{#chartconfig.variablegroups}}
 								<option id="{{this.name}}" {{#if this.isSelected}}selected{{/if}}>{{this.name}}</option>
 								{{/chartconfig.variablegroups}}
@@ -92,7 +92,14 @@
 								<label class="font-normal">Start Date</label>
 								<div class="input-group">
 									<span class="input-group-addon"><i class="fa fa-calendar"></i></span>
-									<input id="startDate" type="text" class="form-control date-picker" value="2014-07-01">
+									<input id="startDate" type="text" class="form-control date-picker" value="{{defaultSearchRange.threeDaysAgo}}" onchange="requestUpdatedChart();">
+								</div>
+							</div>
+							<div class="form-group col-sm-12">
+								<label class="font-normal">Start time</label>
+								<div class="input-group clockpicker" data-autoclose="true">
+									<span class="input-group-addon"><span class="fa fa-clock-o"></span></span>
+									<input id="startTime" type="text" class="form-control" value="00:00" onchange="requestUpdatedChart();">
 								</div>
 							</div>
 							<div class="col-sm-12">
@@ -101,8 +108,15 @@
 							<div class="form-group col-sm-12">
 								<label class="font-normal">End Date</label>
 								<div class="input-group">
+									<input id="endDate" type="text" class="form-control date-picker" value="{{defaultSearchRange.currentDate}}" onchange="requestUpdatedChart();">
 									<span class="input-group-addon"><i class="fa fa-calendar"></i></span>
-									<input id="endDate" type="text" class="form-control date-picker" value="2014-07-01">
+								</div>
+							</div>
+							<div class="form-group col-sm-12">
+								<label class="font-normal">End Time</label>
+								<div class="input-group clockpicker" data-autoclose="true">
+									<input id="endTime" type="text" class="form-control" value="00:00" onchange="requestUpdatedChart();">
+									<span class="input-group-addon"><span class="fa fa-clock-o"></span></span>
 								</div>
 							</div>
 						</div>
@@ -158,11 +172,35 @@
 </div>
 
 <script type="text/javascript">
+	// Initialize socket.io
+	const socket = io();
+
+	socket.emit('some event', { my: 'data' });
+
+	// Listen for responses from the server
+	socket.on('some response', function(data) {
+		console.log('Received response:', data);
+	});
+
+
 	// Function to be called when the chart needs to be updated
-	function updateChart() {
+	function requestUpdatedChart() {
 		let currentSelectedVariableGroup = $("#variableGroupSelector").val();
 		let currentSelectedSearchType = $("#timeRangeSelector").val();
-		console.log("update chart hit");
+		let updatedSearch = {
+			variableGroup: currentSelectedVariableGroup,
+			searchType: currentSelectedSearchType
+		};
+		// If the user has selected a custom search, request a historical chart
+		if (currentSelectedSearchType === "custom") {
+			updatedSearch.startDate = $("#startDate").val();
+			updatedSearch.startTime = $("#startTime").val();
+			updatedSearch.endDate = $("#endDate").val();
+			updatedSearch.endTime = $("#endTime").val();
+			socket.emit('historical-chart', updatedSearch);
+		} else { // Otherwise, we will be asking for a relative (live) chart
+			socket.emit('relative-chart', updatedSearch);
+		}
 	}
 
 	// Function to toggle the display of custom date/time
@@ -182,13 +220,13 @@
 		// Add change event listener to the time range selector
 		$('#timeRangeSelector').on('change', function() {
 			toggleCustomDateTimeDisplay();
-			updateChart(); // Call the updateChart function as well
+			requestUpdatedChart(); // Call the updateChart function as well
 		});
 
 		// Initially load the default group when page is loaded
 		let initialSelectElement = document.querySelector('#variableGroupSelector');
 		if (initialSelectElement) {
-			updateChart();
+			requestUpdatedChart();
 		}
 
 		// Call the function on initial load as well
@@ -196,16 +234,17 @@
 	});
 
 	$(document).ready(function(){
-		// Setup datepickers
-		let startDate = $('.date-picker').datepicker({
+		// Setup date/time pickers
+		$('.date-picker').datepicker({
 			todayBtn: "linked",
 			keyboardNavigation: true,
 			forceParse: true,
-			calendarWeeks: true,
+			calendarWeeks: false,
 			autoclose: true,
 			format: "yyyy-mm-dd"
 		});
-		console.log(startDate);
+		
+		$('.clockpicker').clockpicker();
 	});
 
 
