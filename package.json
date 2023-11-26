@@ -5,7 +5,7 @@
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "serverreload": "/bin/bash -c '(/bin/bash docker-dev-startup.sh && echo \"waiting for influx\" && sleep 3 && nodemon app.js) || docker rm -f influxviewerdev'",
+    "serverreload": "/bin/bash -c '(/bin/bash docker-dev-startup.sh && echo \"waiting for influx\" && sleep 5 && nodemon app.js) || docker rm -f influxviewerdev'",
     "browsersync": "browser-sync start --proxy 'localhost:3000' --port 5000 --files 'public/**/*.*, views/**/*.*'",
     "dev": "npm-run-all -p serverreload browsersync"
   },
