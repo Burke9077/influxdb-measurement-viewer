@@ -66,38 +66,6 @@ queryApi.queryRaw('buckets()', {
 
 
 /*
-	Define helper functions for our routes
-*/
-/*
-	getAllMeasurements
-	input: queryApi (influxDB object)
-	bucketName: influx DB bucket name (String)
-	callback: function (err, data)
-*/
-function getAllMeasurements(queryApi, bucketName, callback) {
-	let query = `
-	import "influxdata/influxdb/schema"
-
-	schema.measurements(bucket: "${bucketName}")
-	`;
-	let measurementsArray = [];
-	queryApi.queryRows(query, {
-		next(row, tableMeta) {
-			let o = tableMeta.toObject(row);
-			measurementsArray.push(o._value);
-		},
-		error(error) {
-			console.error("\nMeasurement list retrieved with error: \n" + error);
-			return callback(error, measurementsArray);
-		},
-		complete() {
-			return callback(null, measurementsArray);
-		},
-	}); 
-};
-
-
-/*
 	Load the chart and metrics configuration
 */
 const ChartConfig = require('./helpers/ChartConfig');
