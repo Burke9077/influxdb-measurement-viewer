@@ -60,63 +60,79 @@ class ChartConfig {
 
 	// Function to load measurements and their min/max values
 	createDefaultSettings() {
-		console.log(`Creating default settings.`)
-		const measurementsQuery = `
-			import "influxdata/influxdb/v1"
-			v1.measurements(bucket: "${this.bucket}")`;
-	
-		this.executeFluxQuery(measurementsQuery)
-			.then(measurements => {
-				return Promise.all(measurements.map(measurement => {
-					console.log(`Discovered measurement for default settings: ${measurement._value}`);
-					const minMaxQuery = `
-						from(bucket: "${this.bucket}")
-						|> range(start: -30d)
-						|> filter(fn: (r) => r._measurement == "${measurement._value}")
-						|> map(fn: (r) => ({ r with _value: float(v: r._value) })) // Convert all values to floats
-						|> reduce(
-							fn: (r, accumulator) => ({
-								min: if r._value < accumulator.min then r._value else accumulator.min,
-								max: if r._value > accumulator.max then r._value else accumulator.max
-							}),
-							identity: {min: float(v: 9999999999), max: float(v: -9999999999)} // Use large numbers for initialization
-						)`;
-					return this.executeFluxQuery(minMaxQuery)
-						.then(minMaxValues => {
-							console.log(`Discovered min/max values for ${measurement._value}.`);
-							if (minMaxValues.length > 0) {
-								const { min, max } = minMaxValues[0];
-								return {
-									name: measurement._value,
-									min: min,
-									max: max,
-									measurementDisplayType: "linear"
-								};
-							}
-						});
-				}));
-			})
-			.then(measurementResults => {
-				this.measurements = measurementResults.filter(Boolean);
-				console.log(`Successfully retrieved min and max settings.`);
-				console.log(`Creating initial variable group.`);
-				let defaultVariableGroup = {
-					name: "All Variables",
-					variables: []
-				};
-				for (let variableGroupMember of this.measurements) {
-					console.log(variableGroupMember);
-					console.log(JSON.stringify(variableGroupMember, null, 4));
-					defaultVariableGroup.variables.push(variableGroupMember.name);
-				}
-				this.variablegroups = [defaultVariableGroup];
-				this.save(); // Save after all measurements have been updated
-			})
-			.catch(error => {
-				console.error('Error creating default settings:', error);
-			});
-	}
-	
+		console.log(`Creating default settings.`);
+		const defaultSearchWindow = `-30d`;
+	  
+		const fieldsQuery = `
+		  from(bucket: "${this.bucket}")
+		  |> range(start: ${defaultSearchWindow})
+		  |> filter(fn: (r) => r._measurement == "plc_data")
+		  |> keep(columns: ["VariableName"])
+		  |> distinct(column: "VariableName")`;
+	  
+		this.executeFluxQuery(fieldsQuery)
+		  .then(fields => {
+			// Use the VariableName property from the query results
+			return Promise.all(fields.map(field => {
+			  const minMaxQuery = `
+				from(bucket: "${this.bucket}")
+				|> range(start: ${defaultSearchWindow})
+				|> filter(fn: (r) => r._measurement == "plc_data" and r.VariableName == "${field.VariableName}")
+				|> map(fn: (r) => ({ r with _value: float(v: r._value) }))
+				|> reduce(
+				  fn: (r, accumulator) => ({
+					min: if r._value < accumulator.min then r._value else accumulator.min,
+					max: if r._value > accumulator.max then r._value else accumulator.max
+				  }),
+				  identity: {min: float(v: 9999999999), max: float(v: -9999999999)}
+				)`;
+	  
+			  return this.executeFluxQuery(minMaxQuery)
+				.then(minMaxValues => {
+				  if (minMaxValues.length > 0) {
+					const { min, max } = minMaxValues[0];
+					return {
+					  name: field.VariableName, // Use VariableName as the name
+					  min: min,
+					  max: max,
+					  measurementDisplayType: "linear"
+					};
+				  } else {
+					return null;
+				  }
+				});
+			}));
+		  })
+		  .then(measurementResults => {
+			this.measurements = measurementResults.filter(Boolean); // Filter out null results
+			let defaultVariableGroup = {
+			  name: "All Variables",
+			  variables: this.measurements.map(m => m.name) // Map to the names of the measurements
+			};
+			this.variablegroups = [defaultVariableGroup];
+			this.save(); // Save after all measurements have been updated
+		  })
+		  .catch(error => {
+			console.error('Error creating default settings:', error);
+		  });
+	  }
+			
+	  // Helper function to execute flux query
+	  async executeFluxQuery(query) {
+		try {
+		  const results = [];
+		  const result = await this.queryApi.collectRows(query);
+		  result.forEach(row => {
+			results.push(row);
+		  });
+		  return results;
+		} catch (error) {
+		  console.error('Error executing flux query:', error);
+		  throw error;
+		}
+	  }
+		  
+							
 	// Helper function to execute flux query
 	async executeFluxQuery(query) {
 		try {
