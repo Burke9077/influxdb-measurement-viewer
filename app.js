@@ -142,11 +142,29 @@ io.on('connection', (socket) => {
 	*/
 
 	// Request a historical (date & time range) chart
-    socket.on('historical-chart', (data) => {
+    socket.on('historical-chart', async (data) => {
 		let dataf = JSON.stringify(data, null, 4);
 		console.log(`Historical chart requested: ${dataf}`);
-        // Process the data and emit a response
-        io.emit('some response', { some: 'data' });
+
+		// Get the variables we need given the variblegroup
+		let variablesRequested = chartConfig.getVariablesByGroupName(data.variableGroup);
+
+		// Prepare the Flux query
+        let fluxQuery = buildFluxQuery(variablesRequested, data);
+        try {
+            // Execute the query
+            let results = await queryApi.collectRows(fluxQuery);
+
+			// Modify these results so they can be consumed by the client's chart
+			let chartData = transformResultsToChartData(results);
+
+            // Emit the results back to the client
+            socket.emit('historical-data', chartData);
+        } catch (error) {
+            console.error('Error executing flux query:', error);
+            // Emit error back to the client
+            socket.emit('error', 'Error fetching data');
+        }
     });
 
 	// Request a relative (live) chart
@@ -157,3 +175,87 @@ io.on('connection', (socket) => {
         io.emit('some response', { some: 'data' });
     });
 });
+
+// Function to build the Flux query
+function buildFluxQuery(variables, data) {
+    // Convert date and time to ISO format
+    const startDateTime = moment(`${data.startDate} ${data.startTime}`).toISOString();
+    const endDateTime = moment(`${data.endDate} ${data.endTime}`).toISOString();
+
+    // Start building the Flux query
+    let fluxQuery = `
+        from(bucket: "${config.influxdb.bucket}")
+        |> range(start: ${startDateTime}, stop: ${endDateTime})
+        |> filter(fn: (r) => r["_measurement"] == "plc_data")`;
+
+    // Add variable filters
+    if (variables.length > 0) {
+        const variableFilters = variables.map(v => `r["VariableName"] == "${v}"`).join(' or ');
+        fluxQuery += `
+        |> filter(fn: (r) => ${variableFilters})`;
+    }
+
+    // Add field filter and any other transformations needed
+    fluxQuery += `
+        |> filter(fn: (r) => r["_field"] == "value")
+        // Add any other transformations or aggregations here
+    `;
+
+    return fluxQuery;
+}
+
+function transformResultsToChartData(results) {
+    // Group results by VariableName
+    const groupedResults = results.reduce((acc, item) => {
+        if (!acc[item.VariableName]) {
+            acc[item.VariableName] = [];
+        }
+        acc[item.VariableName].push(item);
+        return acc;
+    }, {});
+
+    // Map each group to a dataset
+    const datasets = Object.keys(groupedResults).map((variableName, index) => {
+        // Map each data point to the required format
+        const dataPoints = groupedResults[variableName].map(item => ({
+            x: item._time,
+            y: item._value
+        }));
+
+        return {
+            label: variableName,
+            yAxisID: `y${index + 1}`,
+            data: dataPoints
+        };
+    });
+
+    // Generate yAxis options
+    const yAxisOptions = datasets.reduce((acc, dataset, index) => {
+        acc[`y${index + 1}`] = {
+            type: 'linear',
+            min: 0,
+            max: 200,
+            display: true
+        };
+        return acc;
+    }, {});
+
+    // Construct the chart data object
+    const chartData = {
+        type: 'line',
+        data: {
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            scales: yAxisOptions,
+			plugins: {
+				decimation: {
+					enabled: true
+				}
+			}
+        }
+    };
+
+    return chartData;
+}

@@ -62,77 +62,79 @@ class ChartConfig {
 	createDefaultSettings() {
 		console.log(`Creating default settings.`);
 		const defaultSearchWindow = `-30d`;
-	  
+		
 		const fieldsQuery = `
-		  from(bucket: "${this.bucket}")
-		  |> range(start: ${defaultSearchWindow})
-		  |> filter(fn: (r) => r._measurement == "plc_data")
-		  |> keep(columns: ["VariableName"])
-		  |> distinct(column: "VariableName")`;
-	  
-		this.executeFluxQuery(fieldsQuery)
-		  .then(fields => {
+			from(bucket: "${this.bucket}")
+			|> range(start: ${defaultSearchWindow})
+			|> filter(fn: (r) => r._measurement == "plc_data")
+			|> keep(columns: ["VariableName"])
+			|> distinct(column: "VariableName")`;
+		
+		this.executeFluxQuery(fieldsQuery).then(fields => {
 			// Use the VariableName property from the query results
 			return Promise.all(fields.map(field => {
-			  const minMaxQuery = `
-				from(bucket: "${this.bucket}")
-				|> range(start: ${defaultSearchWindow})
-				|> filter(fn: (r) => r._measurement == "plc_data" and r.VariableName == "${field.VariableName}")
-				|> map(fn: (r) => ({ r with _value: float(v: r._value) }))
-				|> reduce(
-				  fn: (r, accumulator) => ({
-					min: if r._value < accumulator.min then r._value else accumulator.min,
-					max: if r._value > accumulator.max then r._value else accumulator.max
-				  }),
-				  identity: {min: float(v: 9999999999), max: float(v: -9999999999)}
-				)`;
-	  
-			  return this.executeFluxQuery(minMaxQuery)
+				const minMaxQuery = `
+					from(bucket: "${this.bucket}")
+					|> range(start: ${defaultSearchWindow})
+					|> filter(fn: (r) => r._measurement == "plc_data" and r.VariableName == "${field.VariableName}")
+					|> map(fn: (r) => ({ r with _value: float(v: r._value) }))
+					|> reduce(
+						fn: (r, accumulator) => ({
+						min: if r._value < accumulator.min then r._value else accumulator.min,
+						max: if r._value > accumulator.max then r._value else accumulator.max
+						}),
+						identity: {min: float(v: 9999999999), max: float(v: -9999999999)}
+					)`;
+		
+				return this.executeFluxQuery(minMaxQuery)
 				.then(minMaxValues => {
-				  if (minMaxValues.length > 0) {
-					const { min, max } = minMaxValues[0];
-					return {
-					  name: field.VariableName, // Use VariableName as the name
-					  min: min,
-					  max: max,
-					  measurementDisplayType: "linear"
-					};
-				  } else {
-					return null;
-				  }
+					if (minMaxValues.length > 0) {
+						const { min, max } = minMaxValues[0];
+						return {
+							name: field.VariableName, // Use VariableName as the name
+							min: min,
+							max: max,
+							measurementDisplayType: "linear"
+						};
+					} else {
+						return null;
+					}
 				});
 			}));
-		  })
-		  .then(measurementResults => {
+		}).then(measurementResults => {
 			this.measurements = measurementResults.filter(Boolean); // Filter out null results
 			let defaultVariableGroup = {
-			  name: "All Variables",
-			  variables: this.measurements.map(m => m.name) // Map to the names of the measurements
+				name: "All Variables",
+				variables: this.measurements.map(m => m.name) // Map to the names of the measurements
 			};
 			this.variablegroups = [defaultVariableGroup];
 			this.save(); // Save after all measurements have been updated
-		  })
-		  .catch(error => {
+		}).catch(error => {
 			console.error('Error creating default settings:', error);
-		  });
-	  }
-			
-	  // Helper function to execute flux query
-	  async executeFluxQuery(query) {
+		});
+	}
+
+	// Method to get variables by group name
+	getVariablesByGroupName(groupName) {
+		const group = this.variablegroups.find(g => g.name === groupName);
+		return group ? group.variables : [];
+	}
+
+	// Helper function to execute flux query
+	async executeFluxQuery(query) {
 		try {
-		  const results = [];
-		  const result = await this.queryApi.collectRows(query);
-		  result.forEach(row => {
-			results.push(row);
-		  });
-		  return results;
+			const results = [];
+			const result = await this.queryApi.collectRows(query);
+			result.forEach(row => {
+				results.push(row);
+			});
+			return results;
 		} catch (error) {
-		  console.error('Error executing flux query:', error);
-		  throw error;
+			console.error('Error executing flux query:', error);
+			throw error;
 		}
-	  }
-		  
-							
+	}
+
 	// Helper function to execute flux query
 	async executeFluxQuery(query) {
 		try {

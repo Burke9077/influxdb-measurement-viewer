@@ -175,14 +175,6 @@
 	// Initialize socket.io
 	const socket = io();
 
-	socket.emit('some event', { my: 'data' });
-
-	// Listen for responses from the server
-	socket.on('some response', function(data) {
-		console.log('Received response:', data);
-	});
-
-
 	// Function to be called when the chart needs to be updated
 	function requestUpdatedChart() {
 		let currentSelectedVariableGroup = $("#variableGroupSelector").val();
@@ -253,28 +245,22 @@
 		type: 'line',
 		data: {
 			datasets: [
-				{
-					label: "Data 1",
-					yAxisID: 'y1',
-					backgroundColor: 'rgba(26,179,148,0.5)',
-					borderColor: "rgba(26,179,148,0.7)",
-					pointBackgroundColor: "rgba(26,179,148,1)",
-					pointBorderColor: "#fff",
-					data: [{x: "2022-01-01", y: 28}, {x: "2022-02-01", y: 48}, {x: "2022-03-01", y: 40}]
+				{ // One entry given per VariableName returned
+					label: "24VDC Circuit A OK 1", // The variable name as the label
+					yAxisID: 'y1', // Create a new "yAxisID" for each VariableName returned, increment as we go
+					data: [{x: "2023-10-01T04:00:00Z", y: 28}, {x: "2023-10-03T04:00:00Z", y: 48}, {x: "2023-10-05T04:00:00Z", y: 40}] // Finally the data array will be an array of our returned results for a given variable with x as the timestamp (_time) and y as the _value
 				},{
-					label: "Data 2",
+					label: "24VDC Circuit B OK 1",
 					yAxisID: 'y2',
-					backgroundColor: 'rgba(220, 220, 220, 0.5)',
-					pointBorderColor: "#fff",
-					data: [{x: "2022-01-01", y: 65}, {x: "2022-02-01", y: 80}, {x: "2022-03-01", y: 90}]
+					data: [{x: "2023-10-01T04:00:00Z", y: 65}, {x: "2023-10-03T04:00:00Z", y: 80}, {x: "2023-10-05T04:00:00Z", y: 90}]
 				}
 			]
 		},
 		options: {
 			responsive: true,
 			scales: {
-				y1: {
-					type: 'logarithmic',
+				y1: { // For now lets just make a y axis for each returned variable group we find, we'll tweak this more later
+					type: 'linear',
 					min: 0,
 					max: 200,
 					display: false,
@@ -291,4 +277,12 @@
 
 	let ctx = document.getElementById("lineChart").getContext("2d");
 	let chart = new Chart(ctx, parameterChart);
+
+	// Add socket.io chart integration
+	socket.on('historical-data', (chartData) => {
+		console.log(JSON.stringify(chartData, null, 4).substring(0,9999999));
+		chart.data = chartData.data;
+		chart.options = chartData.options;
+		chart.update();
+	});
 </script>
