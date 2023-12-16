@@ -248,12 +248,7 @@ function transformResultsToChartData(results) {
         },
         options: {
             responsive: true,
-            scales: yAxisOptions,
-			plugins: {
-				decimation: {
-					enabled: true
-				}
-			}
+            scales: yAxisOptions
         }
     };
 
