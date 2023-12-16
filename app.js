@@ -198,6 +198,8 @@ function buildFluxQuery(variables, data) {
     // Add field filter and any other transformations needed
     fluxQuery += `
         |> filter(fn: (r) => r["_field"] == "value")
+        |> aggregateWindow(every: 1m, fn: mean, createEmpty: false)
+        |> yield(name: "mean")
         // Add any other transformations or aggregations here
     `;
 
