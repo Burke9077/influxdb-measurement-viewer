@@ -168,19 +168,80 @@ io.on('connection', (socket) => {
     });
 
 	// Request a relative (live) chart
-    socket.on('relative-chart', (data) => {
-		let dataf = JSON.stringify(data, null, 4);
-		console.log(`Relative chart requested: ${dataf}`);
-        // Process the data and emit a response
-        io.emit('some response', { some: 'data' });
+    socket.on('relative-chart', async (data) => {
+        console.log(`Relative chart requested: ${JSON.stringify(data, null, 4)}`);
+    
+        // Get variables for the relative chart
+        let variablesRequested = chartConfig.getVariablesByGroupName(data.variableGroup);
+    
+        // Modify the Flux query for relative data
+        let fluxQuery = buildFluxQueryRelative(variablesRequested, data); // This function should be defined to handle relative/live data
+    
+        try {
+            let results = await queryApi.collectRows(fluxQuery);
+    
+            let chartData = transformResultsToChartData(results);
+            socket.emit('relative-data', chartData);
+        } catch (error) {
+            console.error('Error executing relative flux query:', error);
+            socket.emit('error', 'Error fetching relative data');
+        }
     });
 });
+
+// Function to build the Flux query for relative data
+function buildFluxQueryRelative(variables, data) {
+    // Define the time range for relative data
+    const timeRange = data.searchType;
+    const [amount, unit] = interpretTimeRange(timeRange);
+    const relativeStartDateTime = moment().subtract(amount, unit).toISOString();
+    const relativeEndDateTime = moment().toISOString(); // Current time
+    const windowPeriodRelative = calculateWindowPeriod(relativeStartDateTime, relativeEndDateTime);
+
+    // Start building the Flux query
+    let fluxQuery = `
+        from(bucket: "${config.influxdb.bucket}")
+        |> range(start: ${timeRange})
+        |> filter(fn: (r) => r["_measurement"] == "plc_data")`;
+
+    // Add variable filters similar to the historical query
+    if (variables.length > 0) {
+        const variableFilters = variables.map(v => `r["VariableName"] == "${v}"`).join(' or ');
+        fluxQuery += `
+        |> filter(fn: (r) => ${variableFilters})`;
+    }
+
+    // Add field filter and any other transformations needed
+    fluxQuery += `
+        |> filter(fn: (r) => r["_field"] == "value")
+        |> aggregateWindow(every: ${windowPeriodRelative}, fn: mean, createEmpty: false)
+        |> yield(name: "mean")
+        // Add any other transformations or aggregations here
+    `;
+    console.log("Flux Query:", fluxQuery);
+    return fluxQuery;
+};
+
+// Function to interpret time range from a format like "-60s" or "-5m"
+function interpretTimeRange(timeRange) {
+    const amount = parseInt(timeRange.slice(1, -1));
+    const unit = timeRange.slice(-1);
+
+    switch (unit) {
+        case 's': return [amount, 'seconds'];
+        case 'm': return [amount, 'minutes'];
+        case 'h': return [amount, 'hours'];
+        case 'd': return [amount, 'days'];
+        default: throw new Error('Invalid time range unit');
+    }
+}
 
 // Function to build the Flux query
 function buildFluxQuery(variables, data) {
     // Convert date and time to ISO format
     const startDateTime = moment(`${data.startDate} ${data.startTime}`).toISOString();
     const endDateTime = moment(`${data.endDate} ${data.endTime}`).toISOString();
+    const windowPeriodHistorical = calculateWindowPeriod(startDateTime, endDateTime);
 
     // Start building the Flux query
     let fluxQuery = `
@@ -198,12 +259,35 @@ function buildFluxQuery(variables, data) {
     // Add field filter and any other transformations needed
     fluxQuery += `
         |> filter(fn: (r) => r["_field"] == "value")
-        |> aggregateWindow(every: 1m, fn: mean, createEmpty: false)
+        |> aggregateWindow(every: ${windowPeriodHistorical}, fn: mean, createEmpty: false)
         |> yield(name: "mean")
         // Add any other transformations or aggregations here
     `;
-
+    console.log("Flux Query:", fluxQuery);
     return fluxQuery;
+};
+
+function calculateWindowPeriod(startDateTime, endDateTime, numDataPoints = 100) {
+    // Convert start and end times to moments
+    const start = moment(startDateTime);
+    const end = moment(endDateTime);
+
+    // Calculate total duration in seconds
+    const durationInSeconds = end.diff(start, 'seconds');
+
+    // Calculate window period based on the number of data points
+    const windowPeriodInSeconds = Math.ceil(durationInSeconds / numDataPoints);
+
+    // Convert window period to a Flux-friendly format (e.g., 10s, 1m, 1h)
+    if (windowPeriodInSeconds < 60) {
+        return `${windowPeriodInSeconds}s`;
+    } else if (windowPeriodInSeconds < 3600) {
+        const windowPeriodInMinutes = Math.ceil(windowPeriodInSeconds / 60);
+        return `${windowPeriodInMinutes}m`;
+    } else {
+        const windowPeriodInHours = Math.ceil(windowPeriodInSeconds / 3600);
+        return `${windowPeriodInHours}h`;
+    }
 }
 
 function transformResultsToChartData(results) {
@@ -255,4 +339,4 @@ function transformResultsToChartData(results) {
     };
 
     return chartData;
-}
+};
