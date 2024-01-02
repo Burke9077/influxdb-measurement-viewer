@@ -74,13 +74,6 @@
 									<option value="-15m">Last 15 Minutes</option>
 									<option value="-30m">Last 30 Minutes</option>
 									<option value="-1h">Last 1 Hour</option>
-									<option value="-6h">Last 6 Hours</option>
-									<option value="-12h">Last 12 Hours</option>
-									<option value="-24h">Last 24 Hours</option>
-									<option value="-7d">Last 7 Days</option>
-									<option value="-30d" selected>Last 30 Days</option>
-									<option value="-90d">Last 3 Months</option>
-									<option value="-180d">Last 6 Months</option>
 								</optgroup>
 							</select>
 						</div>
@@ -285,4 +278,13 @@
 		chart.options = chartData.options;
 		chart.update();
 	});
+
+	// Add socket.io chart integration for relative (live) data
+	socket.on('relative-data', (chartData) => {
+    	console.log('Relative chart data:', JSON.stringify(chartData, null, 4).substring(0,9999999));
+    	chart.data = chartData.data;
+    	chart.options = chartData.options;
+    	chart.update();
+	});
+
 </script>

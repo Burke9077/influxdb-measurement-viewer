@@ -134,21 +134,6 @@ class ChartConfig {
 			throw error;
 		}
 	}
-
-	// Helper function to execute flux query
-	async executeFluxQuery(query) {
-		try {
-			const results = [];
-			const result = await this.queryApi.collectRows(query);
-			result.forEach(row => {
-				results.push(row);
-			});
-			return results;
-		} catch (error) {
-			console.error('Error executing flux query:', error);
-			throw error;
-		}
-	}
 }
 
 module.exports = ChartConfig;

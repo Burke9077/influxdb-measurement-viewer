@@ -218,7 +218,6 @@ function buildFluxQueryRelative(variables, data) {
         |> yield(name: "mean")
         // Add any other transformations or aggregations here
     `;
-    console.log("Flux Query:", fluxQuery);
     return fluxQuery;
 };
 
@@ -263,7 +262,6 @@ function buildFluxQuery(variables, data) {
         |> yield(name: "mean")
         // Add any other transformations or aggregations here
     `;
-    console.log("Flux Query:", fluxQuery);
     return fluxQuery;
 };
 
