@@ -319,7 +319,7 @@ function transformResultsToChartData(results) {
             type: 'linear',
             min: 0,
             max: 200,
-            display: true
+            display: index === 0,
         };
         return acc;
     }, {});
@@ -332,9 +332,17 @@ function transformResultsToChartData(results) {
         },
         options: {
             responsive: true,
-            scales: yAxisOptions
+            scales: {
+                x: {
+                    type: 'time', // Assuming your x-axis represents time
+                    time: {
+                        //Nothing here
+                    }
+                },
+                ...yAxisOptions // Spread the dynamically generated y-axis options
+            }
         }
     };
-
+    //console.log('First few data points:', datasets[0].data.slice(0, 5));
     return chartData;
 };
