@@ -1,5 +1,5 @@
 // InfluxAPI.js
-const { InfluxDB } = require('@influxdata/influxdb-client');
+import { InfluxDB } from '@influxdata/influxdb-client';
 
 class InfluxAPI {
 	constructor() {
@@ -25,4 +25,5 @@ class InfluxAPI {
 	}
 }
 
-module.exports = InfluxAPI;
+export default InfluxAPI;
+

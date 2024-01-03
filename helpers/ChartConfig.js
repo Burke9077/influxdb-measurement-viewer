@@ -1,7 +1,6 @@
-const fs = require('fs');
-const yaml = require('js-yaml');
-const InfluxAPI = require('./InfluxAPI');
-
+import fs from 'fs';
+import yaml from 'js-yaml';
+import InfluxAPI from './InfluxAPI.js';
 
 class ChartConfig {
 	constructor(configFilePath, chartConfigFilePath) {
@@ -136,4 +135,4 @@ class ChartConfig {
 	}
 }
 
-module.exports = ChartConfig;
+export default ChartConfig;

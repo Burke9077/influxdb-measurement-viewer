@@ -3,22 +3,31 @@
 */
 
 // Configure our app wide configurations
+/*
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
 const { engine } = require('express-handlebars');
 const moment = require('moment');
+*/
+import express from 'express';
+import fs from 'fs';
+import path from 'path';
+import yaml from 'js-yaml';
+import { engine } from 'express-handlebars';
+import moment from 'moment';
+import { fileURLToPath } from 'url';
 
 // Load the application wide configuration file
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const configPath = path.join(__dirname, 'config.yml');
 const config = yaml.load(fs.readFileSync(configPath, 'utf8'));
 
 // Initialize and configure influxdb
-const InfluxAPI = require('./helpers/InfluxAPI');
+import InfluxAPI from './helpers/InfluxAPI.js';
 InfluxAPI.initialize(config.influxdb);
 let queryApi = InfluxAPI.getInstance();
-
 
 /*
     Initialize the webserver
@@ -42,10 +51,10 @@ app.set('view engine', 'hbs');
 app.use(express.static('public'));
 
 // Create HTTP server and integrate with socket.io
-const http = require('http');
-const { Server } = require('socket.io');
+import http from 'http'
+import {Server as SocketIOServer } from 'socket.io'
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new SocketIOServer(server);
 
 /*
     InfluxDB setup and initial data load
@@ -66,7 +75,7 @@ queryApi.queryRaw('buckets()', {
 /*
 	Load the chart and metrics configuration
 */
-const ChartConfig = require('./helpers/ChartConfig');
+import ChartConfig from './helpers/ChartConfig.js';
 const chartConfigPath = path.join(__dirname, 'chart-config.yml');
 let chartConfig = new ChartConfig(configPath, chartConfigPath);
 
@@ -318,7 +327,7 @@ function transformResultsToChartData(results) {
         acc[`y${index + 1}`] = {
             type: 'linear',
             min: 0,
-            max: 200,
+            max: 1000,
             display: index === 0,
         };
         return acc;
@@ -334,15 +343,11 @@ function transformResultsToChartData(results) {
             responsive: true,
             scales: {
                 x: {
-                    type: 'time', // Assuming your x-axis represents time
-                    time: {
-                        //Nothing here
-                    }
+                    type: 'time'
                 },
-                ...yAxisOptions // Spread the dynamically generated y-axis options
+                ...yAxisOptions
             }
         }
     };
-    //console.log('First few data points:', datasets[0].data.slice(0, 5));
     return chartData;
 };
