@@ -152,10 +152,11 @@ server.listen(port, hostname, () => {
 
 // Configure our socket.io server for live events and updating
 io.on('connection', (socket) => {
+    let liveDataIntervalId;
     console.log('A socket.io user connected');
     socket.on('disconnect', () => {
         console.log('A socket.io user disconnected');
-        clearInterval(intervalId);
+        clearInterval(liveDataIntervalId);
     });
 
     /*
@@ -172,12 +173,19 @@ io.on('connection', (socket) => {
             clearInterval(liveDataIntervalId);
         }
 
-        const intervalId = setInterval(() => {
-            // Fetch data from the database
-            let variablesRequested = chartConfig.getVariablesByGroupName(data.variableGroup);
-            let fluxQuery = buildFluxQueryLive(variablesRequested);
-            socket.emit('liveDataUpdate', fluxQuery);
-        }, 1000); // Emit data every 1000 milliseconds (1 second)
+         // Set up a new interval for the requested group
+         liveDataIntervalId = setInterval(async () => {
+            try {
+                let fluxQuery = buildFluxQueryLive(variablesRequested);
+                let results = await queryApi.collectRows(fluxQuery);
+                //console.log('live data', results)
+                socket.emit('liveDataUpdate', results);
+            } catch (error) {
+                console.error('Error fetching live data:', error);
+                // Optionally, you can emit an error to the client as well
+                socket.emit('liveDataError', { message: 'Error fetching live data.' });
+            }
+        }, 1000); // Emit data every second
         });
 
         socket.on('disconnect', () => {
@@ -358,7 +366,7 @@ function calculateWindowPeriod(startDateTime, endDateTime, numDataPoints = 200) 
     }
 }
 
-function transformResultsToChartData(results) {
+function transformResultsToChartData(results, chartConfig) {
     // Group results by VariableName
     const groupedResults = results.reduce((acc, item) => {
         if (!acc[item.VariableName]) {
@@ -376,10 +384,14 @@ function transformResultsToChartData(results) {
             y: item._value
         }));
 
+        const measurement = chartConfig.measurements.find(m => m.name === variableName);
+        const color = measurement.color; // Use a default color if not found
+
         return {
             label: variableName,
             yAxisID: `y${index + 1}`,
-            data: dataPoints
+            data: dataPoints,
+            borderColor: color,
         };
     });
 

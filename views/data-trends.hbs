@@ -194,20 +194,38 @@
 
 		// Add a row for each variable in the group
     	variableGroup.forEach(variable => {
-			// Fetch live value from the database (you'll need to implement this part)
-			//const liveValue = fetchLiveValueForVariable(variable); // Placeholder function
 
 			// Create a new row
 			const row = tableBody.insertRow();
+			const safeVariableName = variable.replace(/\s+/g, '_'); // Replace spaces with underscores
+			row.id = `row-for-${safeVariableName}`;
+			//console.log('Row IDs', row.id);
 			row.insertCell(0).innerHTML = '<input type="checkbox">'; // Checkbox
 			row.insertCell(1).textContent = variable; // Variable name
 			row.insertCell(2).textContent = 0; // Live value (placeholder)
-    });
+			row.cells[2].classList.add('live-value-cell'); // Add class for live value cell
+    	});
 	}
+
+	function updateTableWithLiveData(liveData) {
+		// Process the live data and update the table
+		liveData.forEach(data => {
+			//console.log("Updating for:", data.VariableName);
+			const variableName = data.VariableName;
+			const safeVariableName = variableName.replace(/\s+/g, '_'); // Replace spaces with underscores
+			const row = document.querySelector(`#row-for-${safeVariableName}`);
+			if (row) {
+				//console.log('this is the if statement');
+				const liveValueCell = row.querySelector('.live-value-cell');
+					liveValueCell.textContent = data._value; // Update with the live value
+			}
+   		});
+	}
+
 	
 	// When the selection changes 
 	function onVariableGroupChange(chartConfig) {
-		console.log('onVariableGroupChange called', chartConfig);
+		//console.log('onVariableGroupChange called', chartConfig);
 		let currentSelectedVariableGroup = $("#variableGroupSelector").val();
 		const variables = getVariablesForGroup(currentSelectedVariableGroup, chartConfig);
 
@@ -217,7 +235,7 @@
 	
 
 	function getVariablesForGroup(selectedGroupName, chartConfig) {
-		console.log(selectedGroupName)
+		//console.log(selectedGroupName)
 		const group = chartConfig.variablegroups.find(group => group.name === selectedGroupName);
 		return group ? group.variables : [];
 	}
@@ -246,12 +264,12 @@
 			//console.log('Fetching chart config')
 			.then(response => response.json())
 			.then(data => {
-				console.log('loading data')
+				//console.log('loading data')
 				chartConfig = data;
-				console.log('Fetched chartConfig:', data);
-				console.log('enabling selector')
+				//console.log('Fetched chartConfig:', data);
+				//console.log('enabling selector')
 				document.getElementById('variableGroupSelector').disabled = false;
-				console.log('updating table')
+				//console.log('updating table')
 				const selectedGroup = selector.value; // Get the default or first group
             	const variables = getVariablesForGroup(selectedGroup, chartConfig);
 				updateTable(variables, chartConfig);
@@ -261,12 +279,16 @@
 		//Listner for Variable group selector change
 		const selector = document.getElementById('variableGroupSelector');
 			if (selector) {
+				const initialVariableGroup = selector.value;
+				socket.emit('requestLiveData', { variableGroup: initialVariableGroup })
 				selector.addEventListener('change', function() {
 					if (chartConfig) {
 						const selectedGroup = this.value; // Get the currently selected group
 						const variables = getVariablesForGroup(selectedGroup, chartConfig);
 						updateTable(variables, chartConfig); // Call updateTable with the correct parameters
 						requestUpdatedChart(); // If this still needs to be called
+						// Request live data updates for the selected group
+            			socket.emit('requestLiveData', { variableGroup: selectedGroup });
 					} else {
 						console.error('Chart configuration data is not loaded yet');
 					}
@@ -275,6 +297,11 @@
 				console.error('Variable group selector not found');
 			}
 
+		socket.on('liveDataUpdate', (liveData) => {
+				// Call the function to update the table with live data
+				//console.log("Received live data:", liveData); // Debug log
+				updateTableWithLiveData(liveData);
+			});
 
 		// Call the function on initial load as well
 		toggleCustomDateTimeDisplay();

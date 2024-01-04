@@ -61,7 +61,8 @@ class ChartConfig {
 	createDefaultSettings() {
 		console.log(`Creating default settings.`);
 		const defaultSearchWindow = `-30d`;
-		
+		const colorPalette = ['#3366cc', '#ff9900', '#109618', '#b3e3f0', '#dd4477', '#66aa00', '#316395'];
+
 		const fieldsQuery = `
 			from(bucket: "${this.bucket}")
 			|> range(start: ${defaultSearchWindow})
@@ -71,7 +72,10 @@ class ChartConfig {
 		
 		this.executeFluxQuery(fieldsQuery).then(fields => {
 			// Use the VariableName property from the query results
-			return Promise.all(fields.map(field => {
+			return Promise.all(fields.map((field, index) => {
+				// Assign a color from the palette, cycling through if necessary
+				const color = colorPalette[index % colorPalette.length];
+
 				const minMaxQuery = `
 					from(bucket: "${this.bucket}")
 					|> range(start: ${defaultSearchWindow})
@@ -91,9 +95,12 @@ class ChartConfig {
 						const { min, max } = minMaxValues[0];
 						return {
 							name: field.VariableName, // Use VariableName as the name
-							min: min,
-							max: max,
-							measurementDisplayType: "linear"
+							ymin: min,
+							ymax: max,
+							yAxisDisplayType: "linear",
+							color: color,
+							units: "undefined",
+							numericFormat: "%.2f"
 						};
 					} else {
 						return null;
