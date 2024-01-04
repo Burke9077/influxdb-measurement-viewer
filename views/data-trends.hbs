@@ -38,7 +38,7 @@
 				<div class="ibox-content">
 					<div class="row">
 						<div class="col-sm-12">
-							<select id="variableGroupSelector" class="form-control" size="3" onchange="requestUpdatedChart();">
+							<select id="variableGroupSelector" class="form-control" size="3" disabled>
 								{{#chartconfig.variablegroups}}
 								<option id="{{this.name}}" {{#if this.isSelected}}selected{{/if}}>{{this.name}}</option>
 								{{/chartconfig.variablegroups}}
@@ -68,7 +68,7 @@
 							<select id="timeRangeSelector" class="form-control">
 								<option value="custom">Custom Date/Time Range</option>
 								<optgroup label="Relative Time Range">
-									<option value="-60s">Last 15 Seconds</option>
+									<option value="-15s">Last 15 Seconds</option>
 									<option value="-60s">Last 60 Seconds</option>
 									<option value="-5m">Last 5 Minutes</option>
 									<option value="-10m">Last 10 Minutes</option>
@@ -133,7 +133,7 @@
 					</div>
 				</div>
 				<div class="ibox-content">
-					<table class="table table-hover">
+					<table id="SelectedGroupTable" class="table table-hover">
 						<thead>
 							<tr>
 								<th>Display</th>
@@ -143,19 +143,7 @@
 						</thead>
 						<tbody>
 							<tr>
-								<td><div class="icheckbox_square-green checked" style="position: relative;"><input type="checkbox" checked="" class="i-checks" name="input[]" style="position: absolute; opacity: 0;"><ins class="iCheck-helper" style="position: absolute; top: 0%; left: 0%; display: block; width: 100%; height: 100%; margin: 0px; padding: 0px; background: rgb(255, 255, 255); border: 0px; opacity: 0;"></ins></div></td>
-								<td>Mark</td>
-								<td>Otto</td>
-							</tr>
-							<tr>
-								<td>2</td>
-								<td>Jacob</td>
-								<td>Thornton</td>
-							</tr>
-							<tr>
-								<td>3</td>
-								<td>Larry</td>
-								<td>the Bird</td>
+								<!-- Rows will be added dynamically here -->
 							</tr>
 						</tbody>
 					</table>
@@ -168,6 +156,7 @@
 <script type="text/javascript">
 	// Initialize socket.io
 	const socket = io();
+	let chartConfig = null;
 
 	// Function to be called when the chart needs to be updated
 	function requestUpdatedChart() {
@@ -196,6 +185,43 @@
 		customDateTimeContainer.style.display = timeRangeSelector.value === 'custom' ? 'block' : 'none';
 	}
 
+	function updateTable(variableGroup, chartConfig) {
+		console.log('Inside updateTable', { variableGroup, chartConfig });
+
+		// Clear existing table rows
+		const tableBody = document.querySelector('#SelectedGroupTable tbody');
+		tableBody.innerHTML = '';
+
+		// Add a row for each variable in the group
+    	variableGroup.forEach(variable => {
+			// Fetch live value from the database (you'll need to implement this part)
+			//const liveValue = fetchLiveValueForVariable(variable); // Placeholder function
+
+			// Create a new row
+			const row = tableBody.insertRow();
+			row.insertCell(0).innerHTML = '<input type="checkbox">'; // Checkbox
+			row.insertCell(1).textContent = variable; // Variable name
+			row.insertCell(2).textContent = 0; // Live value (placeholder)
+    });
+	}
+	
+	// When the selection changes 
+	function onVariableGroupChange(chartConfig) {
+		console.log('onVariableGroupChange called', chartConfig);
+		let currentSelectedVariableGroup = $("#variableGroupSelector").val();
+		const variables = getVariablesForGroup(currentSelectedVariableGroup, chartConfig);
+
+		// Now 'variables' contains the array of variable names for the selected group
+		updateTable(variables, chartConfig); // Pass this array to your table updating function
+	}
+	
+
+	function getVariablesForGroup(selectedGroupName, chartConfig) {
+		console.log(selectedGroupName)
+		const group = chartConfig.variablegroups.find(group => group.name === selectedGroupName);
+		return group ? group.variables : [];
+	}
+
 	// DOMContentLoaded event
 	document.addEventListener('DOMContentLoaded', function() {
 		// Initialize Select2
@@ -214,6 +240,24 @@
 		if (initialSelectElement) {
 			requestUpdatedChart();
 		}
+
+		//Load Chart Config
+		fetch('/api/chart-config')
+			.then(response => response.json())
+			.then(data => {
+				console.log('loading data')
+				const chartConfig = data;
+				console.log('enabling selector')
+				document.getElementById('variableGroupSelector').disabled = false;
+				console.log('updating table')
+				updateTable(variableGroup, chartConfig);
+				document.getElementById('variableGroupSelector').addEventListener('change', function() {
+					console.log('Variable group selector changed');
+            		onVariableGroupChange(chartConfig);
+            		requestUpdatedChart();
+				});
+			})
+			.catch(error => console.error('Error fetching chart config:', error));
 
 		// Call the function on initial load as well
 		toggleCustomDateTimeDisplay();
@@ -274,7 +318,7 @@
 
 	// Add socket.io chart integration
 	socket.on('historical-data', (chartData) => {
-		console.log(JSON.stringify(chartData, null, 4).substring(0,9999999));
+		//console.log(JSON.stringify(chartData, null, 4).substring(0,9999999));
 		chart.data = chartData.data;
 		chart.options = chartData.options;
 		chart.update();
@@ -282,7 +326,7 @@
 
 	// Add socket.io chart integration for relative (live) data
 	socket.on('relative-data', (chartData) => {
-    	console.log('Relative chart data:', JSON.stringify(chartData, null, 4).substring(0,9999999));
+    	//console.log('Relative chart data:', JSON.stringify(chartData, null, 4).substring(0,9999999));
     	chart.data = chartData.data;
     	chart.options = chartData.options;
     	chart.update();

@@ -90,6 +90,17 @@ app.post('/api/chart-config', (req, res) => {
 	}
 });
 
+// Endpoint to retrieve chart settings
+app.get('/api/chart-config', (req, res) => {
+    try {
+        // Send the current chartConfig as a JSON response
+        res.json(chartConfig);
+    } catch (error) {
+        res.status(500).send({ status: 'error', message: error.message });
+    }
+});
+
+
 
 /*
     Serve up web routes
@@ -219,7 +230,7 @@ function buildFluxQueryRelative(variables, data) {
         fluxQuery += `
         |> filter(fn: (r) => ${variableFilters})`;
     }
-
+    console.log(windowPeriodRelative)
     // Add field filter and any other transformations needed
     fluxQuery += `
         |> filter(fn: (r) => r["_field"] == "value")
@@ -274,7 +285,7 @@ function buildFluxQuery(variables, data) {
     return fluxQuery;
 };
 
-function calculateWindowPeriod(startDateTime, endDateTime, numDataPoints = 100) {
+function calculateWindowPeriod(startDateTime, endDateTime, numDataPoints = 200) {
     // Convert start and end times to moments
     const start = moment(startDateTime);
     const end = moment(endDateTime);
@@ -284,7 +295,6 @@ function calculateWindowPeriod(startDateTime, endDateTime, numDataPoints = 100) 
 
     // Calculate window period based on the number of data points
     const windowPeriodInSeconds = Math.ceil(durationInSeconds / numDataPoints);
-
     // Convert window period to a Flux-friendly format (e.g., 10s, 1m, 1h)
     if (windowPeriodInSeconds < 60) {
         return `${windowPeriodInSeconds}s`;
@@ -341,9 +351,23 @@ function transformResultsToChartData(results) {
         },
         options: {
             responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+                position: 'nearest'
+            },
+            plugins:{
+                legend: {
+                    display: false
+                },
+            },
             scales: {
                 x: {
-                    type: 'time'
+                    type: 'timeseries',
+                    ticks: {
+                        source: 'auto',
+                        maxTicksLimit: 10
+                    },
                 },
                 ...yAxisOptions
             }
