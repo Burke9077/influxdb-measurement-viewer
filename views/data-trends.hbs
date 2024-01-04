@@ -243,21 +243,38 @@
 
 		//Load Chart Config
 		fetch('/api/chart-config')
+			//console.log('Fetching chart config')
 			.then(response => response.json())
 			.then(data => {
 				console.log('loading data')
-				const chartConfig = data;
+				chartConfig = data;
+				console.log('Fetched chartConfig:', data);
 				console.log('enabling selector')
 				document.getElementById('variableGroupSelector').disabled = false;
 				console.log('updating table')
-				updateTable(variableGroup, chartConfig);
-				document.getElementById('variableGroupSelector').addEventListener('change', function() {
-					console.log('Variable group selector changed');
-            		onVariableGroupChange(chartConfig);
-            		requestUpdatedChart();
-				});
-			})
+				const selectedGroup = selector.value; // Get the default or first group
+            	const variables = getVariablesForGroup(selectedGroup, chartConfig);
+				updateTable(variables, chartConfig);
+				})
 			.catch(error => console.error('Error fetching chart config:', error));
+
+		//Listner for Variable group selector change
+		const selector = document.getElementById('variableGroupSelector');
+			if (selector) {
+				selector.addEventListener('change', function() {
+					if (chartConfig) {
+						const selectedGroup = this.value; // Get the currently selected group
+						const variables = getVariablesForGroup(selectedGroup, chartConfig);
+						updateTable(variables, chartConfig); // Call updateTable with the correct parameters
+						requestUpdatedChart(); // If this still needs to be called
+					} else {
+						console.error('Chart configuration data is not loaded yet');
+					}
+				});
+			} else {
+				console.error('Variable group selector not found');
+			}
+
 
 		// Call the function on initial load as well
 		toggleCustomDateTimeDisplay();
