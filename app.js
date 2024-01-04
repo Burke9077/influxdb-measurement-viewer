@@ -155,22 +155,47 @@ io.on('connection', (socket) => {
     console.log('A socket.io user connected');
     socket.on('disconnect', () => {
         console.log('A socket.io user disconnected');
+        clearInterval(intervalId);
     });
 
     /*
 		Listen for data requests from users
 	*/
 
+    //Live Data Update for live chart and live value in table
+    socket.on('requestLiveData', (data) => {
+        const variableGroup = data.variableGroup;
+        let variablesRequested = chartConfig.getVariablesByGroupName(variableGroup);
+
+        // Clear any existing interval
+        if (liveDataIntervalId) {
+            clearInterval(liveDataIntervalId);
+        }
+
+        const intervalId = setInterval(() => {
+            // Fetch data from the database
+            let variablesRequested = chartConfig.getVariablesByGroupName(data.variableGroup);
+            let fluxQuery = buildFluxQueryLive(variablesRequested);
+            socket.emit('liveDataUpdate', fluxQuery);
+        }, 1000); // Emit data every 1000 milliseconds (1 second)
+        });
+
+        socket.on('disconnect', () => {
+            if (liveDataIntervalId) {
+                clearInterval(liveDataIntervalId); // Clear the interval on disconnect
+            }
+        });
+
 	// Request a historical (date & time range) chart
     socket.on('historical-chart', async (data) => {
 		let dataf = JSON.stringify(data, null, 4);
-		console.log(`Historical chart requested: ${dataf}`);
+		//console.log(`Historical chart requested: ${dataf}`);
 
 		// Get the variables we need given the variblegroup
 		let variablesRequested = chartConfig.getVariablesByGroupName(data.variableGroup);
 
 		// Prepare the Flux query
-        let fluxQuery = buildFluxQuery(variablesRequested, data);
+        let fluxQuery = buildFluxQueryHistorical(variablesRequested, data);
         try {
             // Execute the query
             let results = await queryApi.collectRows(fluxQuery);
@@ -189,7 +214,7 @@ io.on('connection', (socket) => {
 
 	// Request a relative (live) chart
     socket.on('relative-chart', async (data) => {
-        console.log(`Relative chart requested: ${JSON.stringify(data, null, 4)}`);
+        //console.log(`Relative chart requested: ${JSON.stringify(data, null, 4)}`);
     
         // Get variables for the relative chart
         let variablesRequested = chartConfig.getVariablesByGroupName(data.variableGroup);
@@ -208,6 +233,33 @@ io.on('connection', (socket) => {
         }
     });
 });
+
+// Function to build the Flux query for live data
+function buildFluxQueryLive(variables) {
+    // Define the time range for relative data
+    const recentTime = moment().subtract(3, 'seconds').toISOString(); // 3 seconds ago ensures we capure the most recent point
+
+    // Start building the Flux query
+    let fluxQuery = `
+        from(bucket: "${config.influxdb.bucket}")
+        |> range(start: ${recentTime})
+        |> filter(fn: (r) => r["_measurement"] == "plc_data")`;
+
+    // Add variable filters similar to the historical query
+    if (variables.length > 0) {
+        const variableFilters = variables.map(v => `r["VariableName"] == "${v}"`).join(' or ');
+        fluxQuery += `
+        |> filter(fn: (r) => ${variableFilters})`;
+    }
+    // Add field filter and any other transformations needed
+    fluxQuery += `
+        |> filter(fn: (r) => r["_field"] == "value")
+        |> last() // Get only the latest data point
+        |> yield(name: "last")
+        // Add any other transformations or aggregations here
+    `;
+    return fluxQuery;
+};
 
 // Function to build the Flux query for relative data
 function buildFluxQueryRelative(variables, data) {
@@ -230,7 +282,6 @@ function buildFluxQueryRelative(variables, data) {
         fluxQuery += `
         |> filter(fn: (r) => ${variableFilters})`;
     }
-    console.log(windowPeriodRelative)
     // Add field filter and any other transformations needed
     fluxQuery += `
         |> filter(fn: (r) => r["_field"] == "value")
@@ -256,7 +307,7 @@ function interpretTimeRange(timeRange) {
 }
 
 // Function to build the Flux query
-function buildFluxQuery(variables, data) {
+function buildFluxQueryHistorical(variables, data) {
     // Convert date and time to ISO format
     const startDateTime = moment(`${data.startDate} ${data.startTime}`).toISOString();
     const endDateTime = moment(`${data.endDate} ${data.endTime}`).toISOString();
